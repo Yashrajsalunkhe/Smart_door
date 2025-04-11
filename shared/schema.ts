@@ -1,106 +1,77 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User authentication model
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-// Person model - for face recognition
-export const people = pgTable("people", {
+// Face profiles table
+export const faces = pgTable("faces", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  faceData: text("face_data"), // JSON stringified face descriptors
-  imageCount: integer("image_count").default(0),
+  relationship: text("relationship").notNull(),
+  imageCount: integer("image_count").notNull(),
+  dateAdded: timestamp("date_added").notNull().defaultNow(),
+  descriptor: jsonb("descriptor").notNull()
 });
 
-// Face images model - multiple images per person
-export const faceImages = pgTable("face_images", {
+// History entries table
+export const history = pgTable("history", {
   id: serial("id").primaryKey(),
-  personId: integer("person_id").references(() => people.id, { onDelete: 'cascade' }).notNull(),
-  imageUrl: text("image_url").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  personName: text("person_name").notNull(),
+  isKnown: boolean("is_known").notNull(),
+  confidence: integer("confidence").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  doorStatus: text("door_status").notNull(),
+  snapshot: text("snapshot").notNull()
 });
 
-// Detection model - history of face detections
-export const detections = pgTable("detections", {
-  id: serial("id").primaryKey(),
-  personId: integer("person_id").references(() => people.id, { onDelete: 'set null' }),
-  personName: text("person_name"),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-  imageUrl: text("image_url").notNull(),
-  confidence: text("confidence").default("0"),
-  isKnown: boolean("is_known").default(false),
-});
-
-// Settings model
+// Settings table
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  notificationEmail: boolean("notification_email").default(false),
-  notificationBrowser: boolean("notification_browser").default(true),
-  notificationMobile: boolean("notification_mobile").default(true),
-  confidenceThreshold: integer("confidence_threshold").default(75),
-  saveKnownFaces: boolean("save_known_faces").default(false),
-  filterLowQuality: boolean("filter_low_quality").default(true),
-  cameraQuality: text("camera_quality").default("medium"),
-  captureDuration: integer("capture_duration").default(30),
+  notifications: jsonb("notifications").notNull(),
+  recognition: jsonb("recognition").notNull(),
+  camera: jsonb("camera").notNull(),
+  account: jsonb("account").notNull()
 });
 
-// Door status model
+// Door status table
 export const doorStatus = pgTable("door_status", {
   id: serial("id").primaryKey(),
-  isLocked: boolean("is_locked").default(true),
-  lastChanged: timestamp("last_changed").defaultNow().notNull(),
+  status: text("status").notNull(),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow()
 });
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export const insertPersonSchema = createInsertSchema(people).pick({
+export const insertFaceSchema = createInsertSchema(faces).pick({
   name: true,
-  faceData: true,
+  relationship: true,
+  imageCount: true,
+  descriptor: true
 });
 
-export const insertFaceImageSchema = createInsertSchema(faceImages).pick({
-  personId: true,
-  imageUrl: true,
-});
-
-export const insertDetectionSchema = createInsertSchema(detections).pick({
-  personId: true,
+export const insertHistorySchema = createInsertSchema(history).pick({
   personName: true,
-  imageUrl: true,
-  confidence: true,
   isKnown: true,
+  confidence: true,
+  doorStatus: true,
+  snapshot: true
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).omit({
-  id: true,
+export const insertSettingsSchema = createInsertSchema(settings).pick({
+  notifications: true,
+  recognition: true,
+  camera: true,
+  account: true
 });
 
 export const insertDoorStatusSchema = createInsertSchema(doorStatus).pick({
-  isLocked: true,
+  status: true
 });
 
 // Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Face = typeof faces.$inferSelect;
+export type InsertFace = z.infer<typeof insertFaceSchema>;
 
-export type Person = typeof people.$inferSelect;
-export type InsertPerson = z.infer<typeof insertPersonSchema>;
-
-export type FaceImage = typeof faceImages.$inferSelect;
-export type InsertFaceImage = z.infer<typeof insertFaceImageSchema>;
-
-export type Detection = typeof detections.$inferSelect;
-export type InsertDetection = z.infer<typeof insertDetectionSchema>;
+export type History = typeof history.$inferSelect;
+export type InsertHistory = z.infer<typeof insertHistorySchema>;
 
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;

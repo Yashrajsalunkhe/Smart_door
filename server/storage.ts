@@ -1,279 +1,298 @@
 import {
-  users, people, faceImages, detections, settings, doorStatus,
-  type User, type InsertUser, 
-  type Person, type InsertPerson, 
-  type FaceImage, type InsertFaceImage,
-  type Detection, type InsertDetection,
-  type Settings, type InsertSettings,
-  type DoorStatus, type InsertDoorStatus
+  Face, InsertFace,
+  History, InsertHistory,
+  Settings, InsertSettings,
+  DoorStatus, InsertDoorStatus
 } from "@shared/schema";
+import fs from 'fs/promises';
+import path from 'path';
 
-// modify the interface with any CRUD methods
-// you might need
 export interface IStorage {
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Face profiles
+  getFaces(): Promise<Face[]>;
+  getFaceById(id: number): Promise<Face | undefined>;
+  createFace(face: InsertFace): Promise<Face>;
+  updateFace(id: number, face: Partial<InsertFace>): Promise<Face | undefined>;
+  deleteFace(id: number): Promise<boolean>;
   
-  // Person methods
-  getPersonById(id: number): Promise<Person | undefined>;
-  getAllPeople(): Promise<Person[]>;
-  createPerson(person: InsertPerson): Promise<Person>;
-  updatePerson(id: number, updates: Partial<Person>): Promise<Person | undefined>;
-  deletePerson(id: number): Promise<void>;
+  // History entries
+  getHistory(options?: { page?: number, limit?: number, filter?: string, date?: string }): Promise<{ entries: History[], total: number }>;
+  getLatestHistory(): Promise<History | undefined>;
+  getTodaySummary(): Promise<{ total: number, known: number, unknown: number }>;
+  createHistory(entry: InsertHistory): Promise<History>;
+  deleteHistory(id: number): Promise<boolean>;
   
-  // Face image methods
-  getFaceImagesByPersonId(personId: number): Promise<FaceImage[]>;
-  createFaceImage(faceImage: InsertFaceImage): Promise<FaceImage>;
+  // Settings
+  getSettings(): Promise<Settings | undefined>;
+  saveSettings(settings: InsertSettings): Promise<Settings>;
   
-  // Detection methods
-  getDetectionById(id: number): Promise<Detection | undefined>;
-  getAllDetections(): Promise<Detection[]>;
-  createDetection(detection: InsertDetection): Promise<Detection>;
+  // Door status
+  getDoorStatus(): Promise<DoorStatus | undefined>;
+  updateDoorStatus(status: InsertDoorStatus): Promise<DoorStatus>;
   
-  // Settings methods
-  getSettings(): Promise<Settings>;
-  updateSettings(updates: Partial<Settings>): Promise<Settings>;
-  
-  // Door status methods
-  getDoorStatus(): Promise<DoorStatus>;
-  updateDoorStatus(updates: InsertDoorStatus): Promise<DoorStatus>;
+  // Face-api.js model setup
+  setupFaceApiModels(): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private people: Map<number, Person>;
-  private faceImages: Map<number, FaceImage>;
-  private detections: Map<number, Detection>;
-  private appSettings: Settings;
-  private doorStatus: DoorStatus;
+  private faces: Map<number, Face>;
+  private history: Map<number, History>;
+  private settings: Settings | undefined;
+  private doorStatus: DoorStatus | undefined;
+  private currentFaceId: number;
+  private currentHistoryId: number;
   
-  private userIdCounter: number;
-  private personIdCounter: number;
-  private faceImageIdCounter: number;
-  private detectionIdCounter: number;
-
   constructor() {
-    this.users = new Map();
-    this.people = new Map();
-    this.faceImages = new Map();
-    this.detections = new Map();
+    this.faces = new Map();
+    this.history = new Map();
+    this.currentFaceId = 1;
+    this.currentHistoryId = 1;
     
-    this.userIdCounter = 1;
-    this.personIdCounter = 1;
-    this.faceImageIdCounter = 1;
-    this.detectionIdCounter = 1;
-    
-    // Initialize settings with defaults
-    this.appSettings = {
+    // Initialize with default settings
+    this.settings = {
       id: 1,
-      notificationEmail: false,
-      notificationBrowser: true,
-      notificationMobile: true,
-      confidenceThreshold: 75,
-      saveKnownFaces: false,
-      filterLowQuality: true,
-      cameraQuality: "medium",
-      captureDuration: 30,
+      notifications: {
+        email: true,
+        browser: true,
+        sms: false,
+        emailAddress: "admin@example.com"
+      },
+      recognition: {
+        confidenceThreshold: 75,
+        snapshotStoragePolicy: "unknown",
+        autoDeletePolicy: "90",
+        skipBlurredImages: true,
+        autoDetectFrequentVisitors: true
+      },
+      camera: {
+        resolution: "medium",
+        trainingImageQuality: "enhanced",
+        frameRate: 24
+      },
+      account: {
+        name: "Admin User",
+        email: "admin@example.com",
+        password: "password"
+      }
     };
     
-    // Initialize door status
+    // Initialize with default door status
     this.doorStatus = {
       id: 1,
-      isLocked: true,
-      lastChanged: new Date(),
+      status: "locked",
+      lastUpdated: new Date()
     };
     
-    // Add sample data for demo
-    this.initializeSampleData();
-  }
-
-  private initializeSampleData() {
-    // Add sample people
-    const samplePeople = [
-      { name: "Sarah Johnson", faceData: JSON.stringify([]) },
-      { name: "John Smith", faceData: JSON.stringify([]) },
-      { name: "Michael Chen", faceData: JSON.stringify([]) }
-    ];
-    
-    samplePeople.forEach(person => {
-      this.createPerson(person);
-    });
-    
-    // Add sample detections
-    const now = new Date();
-    const sampleDetections = [
-      { 
-        personId: 1, 
-        personName: "Sarah Johnson", 
-        imageUrl: "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_14de1c05ecf%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A12pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_14de1c05ecf%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2285.5%22%20y%3D%2270.5%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E", 
-        confidence: "0.98", 
-        isKnown: true,
-        timestamp: new Date(now.getTime() - 10 * 60000) // 10 minutes ago
-      },
-      { 
-        personId: 2, 
-        personName: "John Smith", 
-        imageUrl: "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_14de1c05ecf%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A12pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_14de1c05ecf%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2285.5%22%20y%3D%2270.5%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E", 
-        confidence: "0.85", 
-        isKnown: true,
-        timestamp: new Date(now.getTime() - 30 * 60000) // 30 minutes ago
-      },
-      { 
-        personId: null, 
-        personName: null, 
-        imageUrl: "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_14de1c05ecf%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A12pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_14de1c05ecf%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2285.5%22%20y%3D%2270.5%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E", 
-        confidence: "0", 
-        isKnown: false,
-        timestamp: new Date(now.getTime() - 60 * 60000) // 1 hour ago
-      }
-    ];
-    
-    sampleDetections.forEach(detection => {
-      this.createDetection(detection);
-    });
-  }
-
-  // User methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    // Add some sample data
+    this.addSampleData();
   }
   
-  // Person methods
-  async getPersonById(id: number): Promise<Person | undefined> {
-    return this.people.get(id);
+  private addSampleData() {
+    // Sample faces can be added here if needed
   }
   
-  async getAllPeople(): Promise<Person[]> {
-    return Array.from(this.people.values());
+  // Face profiles methods
+  async getFaces(): Promise<Face[]> {
+    return Array.from(this.faces.values());
   }
   
-  async createPerson(person: InsertPerson): Promise<Person> {
-    const id = this.personIdCounter++;
-    const createdAt = new Date();
-    const newPerson: Person = { 
-      ...person, 
-      id, 
-      createdAt,
-      imageCount: 0
+  async getFaceById(id: number): Promise<Face | undefined> {
+    return this.faces.get(id);
+  }
+  
+  async createFace(face: InsertFace): Promise<Face> {
+    const id = this.currentFaceId++;
+    const newFace: Face = {
+      ...face,
+      id,
+      dateAdded: new Date()
     };
     
-    this.people.set(id, newPerson);
-    return newPerson;
+    this.faces.set(id, newFace);
+    return newFace;
   }
   
-  async updatePerson(id: number, updates: Partial<Person>): Promise<Person | undefined> {
-    const person = this.people.get(id);
-    if (!person) return undefined;
+  async updateFace(id: number, face: Partial<InsertFace>): Promise<Face | undefined> {
+    const existingFace = this.faces.get(id);
+    if (!existingFace) return undefined;
     
-    const updatedPerson = { ...person, ...updates };
-    this.people.set(id, updatedPerson);
-    return updatedPerson;
+    const updatedFace: Face = {
+      ...existingFace,
+      ...face
+    };
+    
+    this.faces.set(id, updatedFace);
+    return updatedFace;
   }
   
-  async deletePerson(id: number): Promise<void> {
-    this.people.delete(id);
-    
-    // Also delete related face images
-    const faceImagesToDelete = Array.from(this.faceImages.values())
-      .filter(img => img.personId === id);
-    
-    faceImagesToDelete.forEach(img => {
-      this.faceImages.delete(img.id);
-    });
-    
-    // Update detections to mark as unknown
-    const relatedDetections = Array.from(this.detections.values())
-      .filter(d => d.personId === id);
-    
-    relatedDetections.forEach(detection => {
-      const updated = {
-        ...detection,
-        personId: null,
-        personName: null,
-        isKnown: false
-      };
-      this.detections.set(detection.id, updated);
-    });
+  async deleteFace(id: number): Promise<boolean> {
+    return this.faces.delete(id);
   }
   
-  // Face image methods
-  async getFaceImagesByPersonId(personId: number): Promise<FaceImage[]> {
-    return Array.from(this.faceImages.values())
-      .filter(img => img.personId === personId);
-  }
-  
-  async createFaceImage(faceImage: InsertFaceImage): Promise<FaceImage> {
-    const id = this.faceImageIdCounter++;
-    const createdAt = new Date();
-    const newFaceImage: FaceImage = { ...faceImage, id, createdAt };
+  // History entries methods
+  async getHistory(options: { page?: number, limit?: number, filter?: string, date?: string } = {}): Promise<{ entries: History[], total: number }> {
+    const page = options.page || 1;
+    const limit = options.limit || 9;
+    const filter = options.filter || 'all';
+    const date = options.date ? new Date(options.date) : null;
     
-    this.faceImages.set(id, newFaceImage);
+    let filteredHistory = Array.from(this.history.values());
     
-    // Update image count for the person
-    const person = this.people.get(faceImage.personId);
-    if (person) {
-      person.imageCount += 1;
-      this.people.set(person.id, person);
+    // Apply filters
+    if (filter === 'known') {
+      filteredHistory = filteredHistory.filter(entry => entry.isKnown);
+    } else if (filter === 'unknown') {
+      filteredHistory = filteredHistory.filter(entry => !entry.isKnown);
     }
     
-    return newFaceImage;
-  }
-  
-  // Detection methods
-  async getDetectionById(id: number): Promise<Detection | undefined> {
-    return this.detections.get(id);
-  }
-  
-  async getAllDetections(): Promise<Detection[]> {
-    return Array.from(this.detections.values());
-  }
-  
-  async createDetection(detection: InsertDetection): Promise<Detection> {
-    const id = this.detectionIdCounter++;
-    const timestamp = new Date();
-    const newDetection: Detection = { ...detection, id, timestamp };
+    // Apply date filter
+    if (date) {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const day = date.getDate();
+      
+      filteredHistory = filteredHistory.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        return entryDate.getFullYear() === year && 
+               entryDate.getMonth() === month && 
+               entryDate.getDate() === day;
+      });
+    }
     
-    this.detections.set(id, newDetection);
-    return newDetection;
+    // Sort by timestamp (newest first)
+    filteredHistory.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    
+    // Paginate
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedHistory = filteredHistory.slice(startIndex, endIndex);
+    
+    return {
+      entries: paginatedHistory,
+      total: filteredHistory.length
+    };
+  }
+  
+  async getLatestHistory(): Promise<History | undefined> {
+    const entries = Array.from(this.history.values());
+    if (entries.length === 0) return undefined;
+    
+    // Sort by timestamp (newest first)
+    entries.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    
+    return entries[0];
+  }
+  
+  async getTodaySummary(): Promise<{ total: number, known: number, unknown: number }> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const day = today.getDate();
+    
+    const todayEntries = Array.from(this.history.values()).filter(entry => {
+      const entryDate = new Date(entry.timestamp);
+      return entryDate.getFullYear() === year && 
+             entryDate.getMonth() === month && 
+             entryDate.getDate() === day;
+    });
+    
+    const knownEntries = todayEntries.filter(entry => entry.isKnown);
+    
+    return {
+      total: todayEntries.length,
+      known: knownEntries.length,
+      unknown: todayEntries.length - knownEntries.length
+    };
+  }
+  
+  async createHistory(entry: InsertHistory): Promise<History> {
+    const id = this.currentHistoryId++;
+    const newEntry: History = {
+      ...entry,
+      id,
+      timestamp: new Date()
+    };
+    
+    this.history.set(id, newEntry);
+    return newEntry;
+  }
+  
+  async deleteHistory(id: number): Promise<boolean> {
+    return this.history.delete(id);
   }
   
   // Settings methods
-  async getSettings(): Promise<Settings> {
-    return this.appSettings;
+  async getSettings(): Promise<Settings | undefined> {
+    return this.settings;
   }
   
-  async updateSettings(updates: Partial<Settings>): Promise<Settings> {
-    this.appSettings = { ...this.appSettings, ...updates };
-    return this.appSettings;
+  async saveSettings(settings: InsertSettings): Promise<Settings> {
+    this.settings = {
+      ...this.settings,
+      ...settings,
+      id: 1
+    };
+    
+    return this.settings;
   }
   
   // Door status methods
-  async getDoorStatus(): Promise<DoorStatus> {
+  async getDoorStatus(): Promise<DoorStatus | undefined> {
+    if (this.doorStatus) {
+      this.doorStatus = {
+        ...this.doorStatus,
+        lastUpdated: new Date()
+      };
+    }
+    
     return this.doorStatus;
   }
   
-  async updateDoorStatus(updates: InsertDoorStatus): Promise<DoorStatus> {
+  async updateDoorStatus(status: InsertDoorStatus): Promise<DoorStatus> {
     this.doorStatus = {
       ...this.doorStatus,
-      ...updates,
-      lastChanged: new Date()
+      ...status,
+      lastUpdated: new Date(),
+      id: 1
     };
+    
     return this.doorStatus;
+  }
+  
+  // Setup face-api.js models
+  async setupFaceApiModels(): Promise<boolean> {
+    try {
+      // Create the models directory if it doesn't exist
+      await fs.mkdir(path.join(process.cwd(), 'dist/public/models'), { recursive: true });
+      
+      // Create the subdirectories for face-api.js models
+      const modelTypes = [
+        'ssd_mobilenetv1', 
+        'tiny_face_detector', 
+        'face_landmark_68', 
+        'face_recognition', 
+        'face_expression'
+      ];
+      
+      for (const modelType of modelTypes) {
+        await fs.mkdir(path.join(process.cwd(), `dist/public/models/${modelType}`), { recursive: true });
+        
+        // Create empty model files (would normally be downloaded/copied)
+        await fs.writeFile(
+          path.join(process.cwd(), `dist/public/models/${modelType}/model.json`), 
+          JSON.stringify({ info: "Face API model would be here" })
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error setting up face-api.js models:', error);
+      return false;
+    }
   }
 }
 

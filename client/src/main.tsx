@@ -1,29 +1,38 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { DoorbellProvider } from "./context/DoorbellContext";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
+import { Toaster } from "@/components/ui/toaster";
+import * as faceapi from "face-api.js";
 
-// Material Icons
-const materialIcons = document.createElement('link');
-materialIcons.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
-materialIcons.rel = 'stylesheet';
-document.head.appendChild(materialIcons);
+// Preload face-api.js models
+async function loadModels() {
+  try {
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+      faceapi.nets.faceExpressionNet.loadFromUri('/models'),
+      faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+    ]);
+    console.log("Face API models loaded successfully");
+  } catch (error) {
+    console.error("Failed to load Face API models:", error);
+  }
+}
 
-// Inter font
-const interFont = document.createElement('link');
-interFont.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap';
-interFont.rel = 'stylesheet';
-document.head.appendChild(interFont);
+// Create models directory and load models when app starts
+const createModelsFolders = async () => {
+  await fetch('/api/models/setup', { method: 'POST' });
+  await loadModels();
+};
 
-// Update document title
-document.title = "Smart Doorbell System";
-
-createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <DoorbellProvider>
+createModelsFolders().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <QueryClientProvider client={queryClient}>
       <App />
-    </DoorbellProvider>
-  </QueryClientProvider>
-);
+      <Toaster />
+    </QueryClientProvider>
+  );
+});

@@ -1,242 +1,221 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPersonSchema, insertDetectionSchema } from "@shared/schema";
-import { z } from "zod";
+import path from "path";
+import fs from "fs/promises";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all people
-  app.get('/api/people', async (req, res) => {
+  const httpServer = createServer(app);
+  
+  // Face API models setup route
+  app.post('/api/models/setup', async (req, res) => {
     try {
-      const people = await storage.getAllPeople();
-      res.json(people);
+      const result = await storage.setupFaceApiModels();
+      res.json({ success: result });
     } catch (error) {
-      console.error('Error fetching people:', error);
-      res.status(500).json({ message: 'Failed to fetch people' });
+      res.status(500).json({ error: 'Failed to set up face models' });
     }
   });
-
-  // Get person by ID
-  app.get('/api/people/:id', async (req, res) => {
+  
+  // Face profiles routes
+  app.get('/api/faces', async (req, res) => {
+    try {
+      const faces = await storage.getFaces();
+      res.json(faces);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch face profiles' });
+    }
+  });
+  
+  app.get('/api/faces/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID format' });
+      const face = await storage.getFaceById(id);
+      
+      if (!face) {
+        return res.status(404).json({ error: 'Face profile not found' });
       }
       
-      const person = await storage.getPersonById(id);
-      if (!person) {
-        return res.status(404).json({ message: 'Person not found' });
-      }
-      
-      res.json(person);
+      res.json(face);
     } catch (error) {
-      console.error('Error fetching person:', error);
-      res.status(500).json({ message: 'Failed to fetch person' });
+      res.status(500).json({ error: 'Failed to fetch face profile' });
     }
   });
-
-  // Create new person
-  app.post('/api/people', async (req, res) => {
+  
+  app.post('/api/faces', async (req, res) => {
     try {
-      const personData = req.body;
-      
-      // Convert the images array to a stringified JSON if it exists
-      if (personData.images && Array.isArray(personData.images)) {
-        personData.faceData = JSON.stringify(personData.images);
-      }
-      
-      // Validate the data with our schema
-      const validatedData = insertPersonSchema.parse({
-        name: personData.name,
-        faceData: personData.faceData || JSON.stringify([])
-      });
-      
-      const newPerson = await storage.createPerson(validatedData);
-      res.status(201).json(newPerson);
+      const face = req.body;
+      const newFace = await storage.createFace(face);
+      res.status(201).json(newFace);
     } catch (error) {
-      console.error('Error creating person:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid person data', errors: error.errors });
-      }
-      res.status(500).json({ message: 'Failed to create person' });
+      res.status(500).json({ error: 'Failed to create face profile' });
     }
   });
-
-  // Update person
-  app.patch('/api/people/:id', async (req, res) => {
+  
+  app.patch('/api/faces/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID format' });
-      }
-      
       const updates = req.body;
-      const updatedPerson = await storage.updatePerson(id, updates);
+      const updatedFace = await storage.updateFace(id, updates);
       
-      if (!updatedPerson) {
-        return res.status(404).json({ message: 'Person not found' });
+      if (!updatedFace) {
+        return res.status(404).json({ error: 'Face profile not found' });
       }
       
-      res.json(updatedPerson);
+      res.json(updatedFace);
     } catch (error) {
-      console.error('Error updating person:', error);
-      res.status(500).json({ message: 'Failed to update person' });
+      res.status(500).json({ error: 'Failed to update face profile' });
     }
   });
-
-  // Delete person
-  app.delete('/api/people/:id', async (req, res) => {
+  
+  app.delete('/api/faces/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID format' });
+      const success = await storage.deleteFace(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Face profile not found' });
       }
       
-      await storage.deletePerson(id);
-      res.status(204).send();
+      res.status(204).end();
     } catch (error) {
-      console.error('Error deleting person:', error);
-      res.status(500).json({ message: 'Failed to delete person' });
+      res.status(500).json({ error: 'Failed to delete face profile' });
     }
   });
-
-  // Get all detections
-  app.get('/api/detections', async (req, res) => {
+  
+  // History routes
+  app.get('/api/history', async (req, res) => {
     try {
-      const detections = await storage.getAllDetections();
-      res.json(detections);
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 9;
+      const filter = req.query.filter as string || 'all';
+      const date = req.query.date as string || '';
+      
+      const history = await storage.getHistory({ page, limit, filter, date });
+      res.json(history);
     } catch (error) {
-      console.error('Error fetching detections:', error);
-      res.status(500).json({ message: 'Failed to fetch detections' });
+      res.status(500).json({ error: 'Failed to fetch history' });
     }
   });
-
-  // Create new detection
-  app.post('/api/detections', async (req, res) => {
+  
+  app.get('/api/history/latest', async (req, res) => {
     try {
-      const detectionData = req.body;
+      const latestEntry = await storage.getLatestHistory();
       
-      // Validate the data
-      const validatedData = insertDetectionSchema.parse({
-        personId: detectionData.personId || null,
-        personName: detectionData.personName || null,
-        imageUrl: detectionData.imageUrl,
-        confidence: detectionData.confidence?.toString() || "0",
-        isKnown: detectionData.isKnown || false
-      });
-      
-      const newDetection = await storage.createDetection(validatedData);
-      res.status(201).json(newDetection);
-    } catch (error) {
-      console.error('Error creating detection:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid detection data', errors: error.errors });
+      if (!latestEntry) {
+        return res.json({ message: 'No history entries found' });
       }
-      res.status(500).json({ message: 'Failed to create detection' });
+      
+      res.json(latestEntry);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch latest history entry' });
     }
   });
-
-  // Get settings
+  
+  app.get('/api/history/today/summary', async (req, res) => {
+    try {
+      const summary = await storage.getTodaySummary();
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch today\'s summary' });
+    }
+  });
+  
+  app.post('/api/history', async (req, res) => {
+    try {
+      const entry = req.body;
+      const newEntry = await storage.createHistory(entry);
+      res.status(201).json(newEntry);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create history entry' });
+    }
+  });
+  
+  app.delete('/api/history/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteHistory(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'History entry not found' });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete history entry' });
+    }
+  });
+  
+  // Settings routes
   app.get('/api/settings', async (req, res) => {
     try {
       const settings = await storage.getSettings();
       
-      // Format for frontend
-      const formattedSettings = {
-        notifications: {
-          email: settings.notificationEmail,
-          browser: settings.notificationBrowser,
-          mobile: settings.notificationMobile,
-        },
-        recognition: {
-          confidenceThreshold: settings.confidenceThreshold,
-          saveKnownFaces: settings.saveKnownFaces,
-          filterLowQuality: settings.filterLowQuality,
-        },
-        camera: {
-          quality: settings.cameraQuality,
-          captureDuration: settings.captureDuration,
-        },
+      if (!settings) {
+        return res.status(404).json({ error: 'Settings not found' });
+      }
+      
+      // Don't send password
+      const { account, ...rest } = settings;
+      const cleanedSettings = {
+        ...rest,
+        account: {
+          name: account.name,
+          email: account.email
+        }
       };
       
-      res.json(formattedSettings);
+      res.json(cleanedSettings);
     } catch (error) {
-      console.error('Error fetching settings:', error);
-      res.status(500).json({ message: 'Failed to fetch settings' });
+      res.status(500).json({ error: 'Failed to fetch settings' });
     }
   });
-
-  // Update settings
-  app.put('/api/settings', async (req, res) => {
+  
+  app.post('/api/settings', async (req, res) => {
     try {
-      const settingsData = req.body;
+      const settings = req.body;
+      const updatedSettings = await storage.saveSettings(settings);
       
-      // Convert from frontend format to database format
-      const dbSettings = {
-        notificationEmail: settingsData.notifications?.email,
-        notificationBrowser: settingsData.notifications?.browser,
-        notificationMobile: settingsData.notifications?.mobile,
-        confidenceThreshold: settingsData.recognition?.confidenceThreshold,
-        saveKnownFaces: settingsData.recognition?.saveKnownFaces,
-        filterLowQuality: settingsData.recognition?.filterLowQuality,
-        cameraQuality: settingsData.camera?.quality,
-        captureDuration: settingsData.camera?.captureDuration,
+      // Don't send password
+      const { account, ...rest } = updatedSettings;
+      const cleanedSettings = {
+        ...rest,
+        account: {
+          name: account.name,
+          email: account.email
+        }
       };
       
-      const updatedSettings = await storage.updateSettings(dbSettings);
-      
-      // Format for frontend
-      const formattedSettings = {
-        notifications: {
-          email: updatedSettings.notificationEmail,
-          browser: updatedSettings.notificationBrowser,
-          mobile: updatedSettings.notificationMobile,
-        },
-        recognition: {
-          confidenceThreshold: updatedSettings.confidenceThreshold,
-          saveKnownFaces: updatedSettings.saveKnownFaces,
-          filterLowQuality: updatedSettings.filterLowQuality,
-        },
-        camera: {
-          quality: updatedSettings.cameraQuality,
-          captureDuration: updatedSettings.captureDuration,
-        },
-      };
-      
-      res.json(formattedSettings);
+      res.json(cleanedSettings);
     } catch (error) {
-      console.error('Error updating settings:', error);
-      res.status(500).json({ message: 'Failed to update settings' });
+      res.status(500).json({ error: 'Failed to save settings' });
     }
   });
-
-  // Get door status
+  
+  // Door status routes
   app.get('/api/door/status', async (req, res) => {
     try {
       const status = await storage.getDoorStatus();
+      
+      if (!status) {
+        return res.status(404).json({ error: 'Door status not found' });
+      }
+      
       res.json(status);
     } catch (error) {
-      console.error('Error fetching door status:', error);
-      res.status(500).json({ message: 'Failed to fetch door status' });
+      res.status(500).json({ error: 'Failed to fetch door status' });
     }
   });
-
-  // Toggle door lock
-  app.post('/api/door/toggle', async (req, res) => {
+  
+  app.post('/api/door/status', async (req, res) => {
     try {
-      const currentStatus = await storage.getDoorStatus();
-      const newStatus = await storage.updateDoorStatus({
-        isLocked: !currentStatus.isLocked
-      });
-      
-      res.json(newStatus);
+      const status = req.body;
+      const updatedStatus = await storage.updateDoorStatus(status);
+      res.json(updatedStatus);
     } catch (error) {
-      console.error('Error toggling door:', error);
-      res.status(500).json({ message: 'Failed to toggle door' });
+      res.status(500).json({ error: 'Failed to update door status' });
     }
   });
 
-  const httpServer = createServer(app);
   return httpServer;
 }

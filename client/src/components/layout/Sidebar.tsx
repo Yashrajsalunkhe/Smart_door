@@ -1,107 +1,84 @@
-import React from 'react';
-import { Link, useLocation } from 'wouter';
-import { useTheme } from '@/hooks/use-theme';
+import { Link } from "wouter";
+import { Home, Camera, Users, Clock, Settings } from "lucide-react";
 
-const Sidebar = () => {
-  const [location] = useLocation();
-  const { isDarkMode, toggleDarkMode } = useTheme();
+interface SidebarProps {
+  currentPage: string;
+}
 
-  const isActive = (path: string) => location === path;
-
+export default function Sidebar({ currentPage }: SidebarProps) {
   return (
-    <div className="hidden md:flex flex-col w-64 bg-white dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-center h-16 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-semibold text-[#3B82F6] dark:text-blue-400">Smart Doorbell</h1>
+    <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h1 className="text-lg font-semibold flex items-center">
+          <Home className="h-6 w-6 mr-2 text-primary" />
+          Smart Doorbell
+        </h1>
       </div>
       
-      <nav className="flex-1 overflow-y-auto pt-5 pb-4">
-        <ul>
-          <li>
-            <div className={`${
-              isActive('/') 
-                ? 'text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-l-4 border-[#3B82F6]' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}>
-              <Link href="/">
-                <div className="flex items-center px-6 py-3 cursor-pointer">
-                  <span className="material-icons mr-3">dashboard</span>
-                  <span>Dashboard</span>
-                </div>
-              </Link>
-            </div>
-          </li>
-          <li>
-            <div className={`${
-              isActive('/recognition') 
-                ? 'text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-l-4 border-[#3B82F6]' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}>
-              <Link href="/recognition">
-                <div className="flex items-center px-6 py-3 cursor-pointer">
-                  <span className="material-icons mr-3">face</span>
-                  <span>Face Recognition</span>
-                </div>
-              </Link>
-            </div>
-          </li>
-          <li>
-            <div className={`${
-              isActive('/management') 
-                ? 'text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-l-4 border-[#3B82F6]' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}>
-              <Link href="/management">
-                <div className="flex items-center px-6 py-3 cursor-pointer">
-                  <span className="material-icons mr-3">people</span>
-                  <span>Face Management</span>
-                </div>
-              </Link>
-            </div>
-          </li>
-          <li>
-            <div className={`${
-              isActive('/history') 
-                ? 'text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-l-4 border-[#3B82F6]' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}>
-              <Link href="/history">
-                <div className="flex items-center px-6 py-3 cursor-pointer">
-                  <span className="material-icons mr-3">history</span>
-                  <span>History</span>
-                </div>
-              </Link>
-            </div>
-          </li>
-          <li>
-            <div className={`${
-              isActive('/settings') 
-                ? 'text-gray-900 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-l-4 border-[#3B82F6]' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}>
-              <Link href="/settings">
-                <div className="flex items-center px-6 py-3 cursor-pointer">
-                  <span className="material-icons mr-3">settings</span>
-                  <span>Settings</span>
-                </div>
-              </Link>
-            </div>
-          </li>
-        </ul>
+      <nav className="flex-1 px-2 py-4 space-y-1">
+        <Link href="/">
+          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+            currentPage === "dashboard" 
+              ? "text-primary-foreground bg-primary"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}>
+            <Home className="h-5 w-5 mr-3" />
+            Dashboard
+          </a>
+        </Link>
+        <Link href="/face-recognition">
+          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+            currentPage === "face-recognition" 
+              ? "text-primary-foreground bg-primary"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}>
+            <Camera className="h-5 w-5 mr-3" />
+            Face Recognition
+          </a>
+        </Link>
+        <Link href="/face-management">
+          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+            currentPage === "face-management" 
+              ? "text-primary-foreground bg-primary"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}>
+            <Users className="h-5 w-5 mr-3" />
+            Face Management
+          </a>
+        </Link>
+        <Link href="/history">
+          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+            currentPage === "history" 
+              ? "text-primary-foreground bg-primary"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}>
+            <Clock className="h-5 w-5 mr-3" />
+            History
+          </a>
+        </Link>
+        <Link href="/settings">
+          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+            currentPage === "settings" 
+              ? "text-primary-foreground bg-primary"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}>
+            <Settings className="h-5 w-5 mr-3" />
+            Settings
+          </a>
+        </Link>
       </nav>
       
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <button 
-          className="flex items-center justify-center w-full px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded"
-          onClick={toggleDarkMode}
-        >
-          <span className="material-icons mr-2 text-sm">
-            {isDarkMode ? 'light_mode' : 'dark_mode'}
-          </span>
-          <span>Toggle Dark Mode</span>
-        </button>
+        <div className="flex items-center">
+          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+            <Users className="h-6 w-6" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium">Admin User</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </aside>
   );
-};
-
-export default Sidebar;
+}

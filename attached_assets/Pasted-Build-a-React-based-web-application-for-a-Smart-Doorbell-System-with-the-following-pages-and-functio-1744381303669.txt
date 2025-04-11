@@ -1,0 +1,80 @@
+Build a React-based web application for a Smart Doorbell System with the following pages and functionality:
+1. Home Page (Dashboard)
+
+    Display the last snapshot taken by the system.
+
+    Show door status (e.g., locked/unlocked).
+
+    Show basic details like last detected person’s name and time.
+
+    Include quick-access feature cards/buttons for navigating to other pages (Face Recognition, Face Management, History, Settings).
+
+2. Face Recognition Page
+
+    Show a live camera feed using webcam.
+
+    Perform real-time face detection and recognition.
+
+    If a known person is detected, display their name.
+
+    If an unknown face is detected, send a notification alert and save the snapshot for history.
+
+3. Face Management Page
+
+    Allow users to add, delete, or rename faces in the database.
+
+    For adding a new face:
+
+        Show a live camera frame.
+
+        Automatically capture 50–100+ images over 15–30 seconds for high accuracy.
+
+        Display a timer and image count during the capture process.
+
+        Ensure the model is trained with this large dataset per face to improve recognition performance.
+
+    List existing face profiles with options to edit (rename) or delete.
+
+4. History Page
+
+    Display a gallery of saved snapshots with metadata (date, time, detected name).
+
+    Include filters/search by name, date, or time.
+
+    Exclude saving:
+
+        Known person images (optional toggle).
+
+        Blurred or low-quality images.
+
+5. Settings Page
+
+    Provide basic configuration options like:
+
+        Notification preferences (email, in-browser).
+
+        Face recognition sensitivity or confidence threshold.
+
+        Snapshot saving preferences (e.g., exclude known faces).
+
+        Camera quality or capture duration settings for face adding.
+
+Technical Requirements:
+
+    Use React.js with modern features (Hooks, Context API if needed).
+
+    Use React Router for page navigation.
+
+    Implement face recognition using libraries like face-api.js, opencv.js, or integrate with a backend model.
+
+    Use WebRTC or webcam API for live video.
+
+    Ensure responsive design (mobile-friendly).
+
+    Store face data and snapshots using localStorage or via backend API endpoints.
+
+    Ensure high model accuracy by training with a large number of face images per person during registration.
+
+    Use clear UI feedback during face capture and recognition (e.g., image count, capture progress).
+
+    Maintain a clean, modular code structure and follow best practices.

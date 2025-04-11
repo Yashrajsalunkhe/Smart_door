@@ -17,54 +17,54 @@ export default function Sidebar({ currentPage }: SidebarProps) {
       
       <nav className="flex-1 px-2 py-4 space-y-1">
         <Link href="/">
-          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+          <div className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 cursor-pointer ${
             currentPage === "dashboard" 
               ? "text-primary-foreground bg-primary"
               : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}>
             <Home className="h-5 w-5 mr-3" />
             Dashboard
-          </a>
+          </div>
         </Link>
         <Link href="/face-recognition">
-          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+          <div className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 cursor-pointer ${
             currentPage === "face-recognition" 
               ? "text-primary-foreground bg-primary"
               : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}>
             <Camera className="h-5 w-5 mr-3" />
             Face Recognition
-          </a>
+          </div>
         </Link>
         <Link href="/face-management">
-          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+          <div className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 cursor-pointer ${
             currentPage === "face-management" 
               ? "text-primary-foreground bg-primary"
               : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}>
             <Users className="h-5 w-5 mr-3" />
             Face Management
-          </a>
+          </div>
         </Link>
         <Link href="/history">
-          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+          <div className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 cursor-pointer ${
             currentPage === "history" 
               ? "text-primary-foreground bg-primary"
               : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}>
             <Clock className="h-5 w-5 mr-3" />
             History
-          </a>
+          </div>
         </Link>
         <Link href="/settings">
-          <a className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 ${
+          <div className={`flex items-center px-4 py-2 rounded-md font-medium transition duration-150 cursor-pointer ${
             currentPage === "settings" 
               ? "text-primary-foreground bg-primary"
               : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}>
             <Settings className="h-5 w-5 mr-3" />
             Settings
-          </a>
+          </div>
         </Link>
       </nav>
       

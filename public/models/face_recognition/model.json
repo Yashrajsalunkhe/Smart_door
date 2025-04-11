@@ -1,0 +1,13 @@
+{
+  "modelTopology": {
+    "model_type": "face_recognition"
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "weights.bin"
+      ],
+      "weights": []
+    }
+  ]
+}

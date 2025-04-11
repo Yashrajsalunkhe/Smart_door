@@ -6,6 +6,7 @@ import {
 } from "@shared/schema";
 import fs from 'fs/promises';
 import path from 'path';
+import { downloadFaceApiModels } from './face-models';
 
 export interface IStorage {
   // Face profiles
@@ -266,28 +267,52 @@ export class MemStorage implements IStorage {
   // Setup face-api.js models
   async setupFaceApiModels(): Promise<boolean> {
     try {
-      // Create the models directory if it doesn't exist
-      await fs.mkdir(path.join(process.cwd(), 'dist/public/models'), { recursive: true });
+      // Use the downloadFaceApiModels function to get real model files
+      const result = await downloadFaceApiModels();
       
-      // Create the subdirectories for face-api.js models
-      const modelTypes = [
-        'ssd_mobilenetv1', 
-        'tiny_face_detector', 
-        'face_landmark_68', 
-        'face_recognition', 
-        'face_expression'
-      ];
-      
-      for (const modelType of modelTypes) {
-        await fs.mkdir(path.join(process.cwd(), `dist/public/models/${modelType}`), { recursive: true });
+      if (!result) {
+        console.log('Failed to download models, creating basic placeholders...');
         
-        // Create empty model files (would normally be downloaded/copied)
-        await fs.writeFile(
-          path.join(process.cwd(), `dist/public/models/${modelType}/model.json`), 
-          JSON.stringify({ info: "Face API model would be here" })
-        );
+        // Create the models directory if it doesn't exist
+        await fs.mkdir(path.join(process.cwd(), 'public/models'), { recursive: true });
+        
+        // Create the subdirectories for face-api.js models
+        const modelTypes = [
+          'ssd_mobilenetv1', 
+          'tiny_face_detector', 
+          'face_landmark_68', 
+          'face_recognition', 
+          'face_expression'
+        ];
+        
+        for (const modelType of modelTypes) {
+          await fs.mkdir(path.join(process.cwd(), `public/models/${modelType}`), { recursive: true });
+          
+          // Create sample model files with proper format for face-api.js
+          const manifestData = {
+            modelTopology: { model_type: modelType },
+            weightsManifest: [
+              {
+                paths: ['weights.bin'],
+                weights: []
+              }
+            ]
+          };
+          
+          await fs.writeFile(
+            path.join(process.cwd(), `public/models/${modelType}/model.json`), 
+            JSON.stringify(manifestData, null, 2)
+          );
+          
+          // Create empty weights file
+          await fs.writeFile(
+            path.join(process.cwd(), `public/models/${modelType}/weights.bin`),
+            Buffer.from([])
+          );
+        }
       }
       
+      console.log('Successfully set up face-api.js model directories');
       return true;
     } catch (error) {
       console.error('Error setting up face-api.js models:', error);

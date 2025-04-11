@@ -1,0 +1,13 @@
+{
+  "modelTopology": {
+    "model_type": "ssd_mobilenetv1"
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "weights.bin"
+      ],
+      "weights": []
+    }
+  ]
+}

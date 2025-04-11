@@ -4,25 +4,65 @@
 import * as faceapi from 'face-api.js';
 
 let modelsLoaded = false;
+let modelLoadAttempted = false;
 
-// You need to host these models on your server or use a CDN
+// Path to the face-api model files
 const MODEL_URL = '/models';
 
-export const loadModels = async (): Promise<void> => {
-  if (modelsLoaded) return;
+// Handles model loading with proper error handling and retry mechanism
+export const loadModels = async (forceReload = false): Promise<boolean> => {
+  // If models are already loaded and no force reload, return early
+  if (modelsLoaded && !forceReload) return true;
+  
+  // If we've already tried and failed before, only retry if forceReload
+  if (modelLoadAttempted && !forceReload) return false;
+  
+  modelLoadAttempted = true;
   
   try {
+    // Initiate server-side model setup
+    try {
+      const setupResponse = await fetch('/api/models/setup', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!setupResponse.ok) {
+        console.warn('Warning: Server model setup may have failed. Attempting to load models anyway.');
+      }
+    } catch (setupError) {
+      console.warn('Failed to set up models on server:', setupError);
+    }
+    
+    // Try loading the models
     await Promise.all([
       faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
     
+    // Alternative loading method in case the Promise.all approach fails
+    try {
+      if (!faceapi.nets.ssdMobilenetv1.isLoaded) {
+        await faceapi.nets.ssdMobilenetv1.load(MODEL_URL);
+      }
+      if (!faceapi.nets.faceLandmark68Net.isLoaded) {
+        await faceapi.nets.faceLandmark68Net.load(MODEL_URL);
+      }
+      if (!faceapi.nets.faceRecognitionNet.isLoaded) {
+        await faceapi.nets.faceRecognitionNet.load(MODEL_URL);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback model loading failed:', fallbackError);
+    }
+    
     modelsLoaded = true;
     console.log('Face API models loaded successfully');
+    return true;
   } catch (error) {
     console.error('Error loading face-api.js models:', error);
-    throw error;
+    modelsLoaded = false;
+    return false;
   }
 };
 

@@ -14,6 +14,29 @@ import {
   User 
 } from "lucide-react";
 
+// Import types for our API responses
+interface HistoryEntry {
+  id: number;
+  personName: string;
+  isKnown: boolean;
+  confidence: number;
+  timestamp: Date;
+  doorStatus: string;
+  snapshot: string;
+}
+
+interface DoorStatusResponse {
+  id: number;
+  status: string;
+  lastUpdated: string;
+}
+
+interface TodaySummary {
+  total: number;
+  known: number;
+  unknown: number;
+}
+
 export default function Dashboard() {
   const [lastSnapshot, setLastSnapshot] = useState<string | null>(null);
 
@@ -193,7 +216,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {quickNavCards.map((card, index) => (
           <Link key={index} href={card.href}>
-            <a className="block bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150">
+            <div className="block bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 cursor-pointer">
               <div className="flex items-center mb-3">
                 <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-md">
                   {card.icon}
@@ -201,7 +224,7 @@ export default function Dashboard() {
                 <h3 className="ml-3 text-md font-medium">{card.title}</h3>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">{card.description}</p>
-            </a>
+            </div>
           </Link>
         ))}
       </div>

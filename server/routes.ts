@@ -160,8 +160,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanedSettings = {
         ...rest,
         account: {
-          name: account.name,
-          email: account.email
+          name: account && typeof account === 'object' && 'name' in account ? account.name : 'Admin User',
+          email: account && typeof account === 'object' && 'email' in account ? account.email : 'admin@example.com'
         }
       };
       
@@ -181,8 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanedSettings = {
         ...rest,
         account: {
-          name: account.name,
-          email: account.email
+          name: account && typeof account === 'object' && 'name' in account ? account.name : 'Admin User',
+          email: account && typeof account === 'object' && 'email' in account ? account.email : 'admin@example.com'
         }
       };
       

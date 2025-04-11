@@ -1,0 +1,13 @@
+{
+  "modelTopology": {
+    "model_type": "tiny_face_detector"
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "weights.bin"
+      ],
+      "weights": []
+    }
+  ]
+}

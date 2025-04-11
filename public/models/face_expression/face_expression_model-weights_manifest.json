@@ -1,0 +1,13 @@
+{
+  "modelTopology": {
+    "model_type": "face_expression"
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "weights.bin"
+      ],
+      "weights": []
+    }
+  ]
+}

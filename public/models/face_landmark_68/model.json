@@ -1,0 +1,13 @@
+{
+  "modelTopology": {
+    "model_type": "face_landmark_68"
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "weights.bin"
+      ],
+      "weights": []
+    }
+  ]
+}

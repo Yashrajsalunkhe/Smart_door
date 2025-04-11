@@ -2,8 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import fetch from 'node-fetch';
 
-// Base URL for face-api.js models from the official repository
-const FACE_API_MODELS_BASE_URL = 'https://github.com/justadudewhohacks/face-api.js/raw/master/weights';
+// Use a CDN that hosts the face-api.js models
+const FACE_API_MODELS_BASE_URL = 'https://vladmandic.github.io/face-api/model';
 
 // List of models and their files
 const MODELS = {

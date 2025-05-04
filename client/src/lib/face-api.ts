@@ -56,10 +56,30 @@ export const loadModels = async (forceReload = false): Promise<boolean> => {
     // Try loading models from our own server first
     try {
       console.log('Attempting to load models from local server...');
+      // Log the actual model URLs being fetched for easier debugging
+      const modelPaths = [
+        'ssd_mobilenetv1/model.json',
+        'face_landmark_68/model.json',
+        'face_recognition/model.json',
+        'tiny_face_detector/model.json'
+      ];
+      modelPaths.forEach(path => {
+        console.log(`Fetching model: ${MODEL_URL}/${path}`);
+      });
+      
+      // Check if the local model.json is actually JSON, not HTML
+      const testModelUrl = `${MODEL_URL}/ssd_mobilenetv1/model.json`;
+      const testResp = await fetch(testModelUrl);
+      const testText = await testResp.text();
+      if (testText.trim().startsWith('<!DOCTYPE') || testText.trim().startsWith('<html')) {
+        throw new Error(`Model fetch at ${testModelUrl} returned HTML, not JSON. Check your public/models/ path and Vite config.`);
+      }
+      
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
       ]);
       modelsLoaded = true;
     } catch (localError) {
@@ -71,7 +91,8 @@ export const loadModels = async (forceReload = false): Promise<boolean> => {
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(CDN_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL)
+          faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL),
+          faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL)
         ]);
         modelsLoaded = true;
       } catch (cdnError) {

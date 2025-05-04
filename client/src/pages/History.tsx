@@ -1,19 +1,39 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SearchIcon, User, Shield, Bell, MoreVertical } from "lucide-react";
+import { SearchIcon, User, Shield, Bell, MoreVertical, Trash2, Trash } from "lucide-react";
+
+// Add type for history entry
+interface HistoryEntry {
+  id: number;
+  personName: string;
+  isKnown: boolean;
+  snapshot?: string;
+  timestamp: string;
+  doorStatus: string;
+}
+
+interface HistoryResponse {
+  entries: HistoryEntry[];
+  total: number;
+}
 
 export default function History() {
   const [searchQuery, setSearchQuery] = useState("");
   const [visitorFilter, setVisitorFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+
+  const queryClient = useQueryClient();
+
   // Fetch history entries with pagination
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<HistoryResponse>({
     queryKey: ['/api/history', visitorFilter, dateFilter, currentPage],
   });
   
@@ -29,6 +49,40 @@ export default function History() {
     return date.toLocaleString();
   };
   
+  // Mutation for deleting a history entry
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/history/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete history entry");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      setDeletingId(null);
+      setShowConfirm(false);
+    },
+  });
+
+  // Mutation for deleting all history entries
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!data?.entries) return;
+      // Delete all entries in parallel
+      await Promise.all(
+        data.entries.map((entry) =>
+          fetch(`/api/history/${entry.id}`, { method: "DELETE" })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      setShowDeleteAll(false);
+    },
+  });
+
+  // Use mutation status for loading
+  const isDeleting = deleteMutation.status === "pending";
+  const isDeletingAll = deleteAllMutation.status === "pending";
+
   return (
     <div className="p-4 md:p-8 fade-in">
       <div className="mb-6">
@@ -53,7 +107,7 @@ export default function History() {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               <Select
                 value={visitorFilter}
                 onValueChange={setVisitorFilter}
@@ -74,6 +128,17 @@ export default function History() {
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
               />
+              
+              <Button
+                variant="destructive"
+                size="sm"
+                className="ml-2"
+                onClick={() => setShowDeleteAll(true)}
+                disabled={!data?.entries?.length || isDeletingAll}
+                title="Delete all history entries"
+              >
+                <Trash className="h-4 w-4 mr-1" /> Delete All
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -99,7 +164,7 @@ export default function History() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredHistory.map((entry: any) => (
+              {data?.entries.map((entry: any) => (
                 <div key={entry.id} className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden shadow-sm">
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700 relative">
                     {entry.snapshot ? (
@@ -113,12 +178,22 @@ export default function History() {
                         <User className="h-8 w-8 text-gray-400" />
                       </div>
                     )}
-                    <div className="absolute top-2 right-2">
+                    <div className="absolute top-2 right-2 flex gap-2">
                       <span className={`inline-flex items-center ${
                         entry.isKnown ? 'bg-green-500' : 'bg-red-500'
                       } px-2 py-0.5 rounded text-xs font-medium text-white`}>
                         {entry.isKnown ? 'Known' : 'Unknown'}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-gray-400 hover:text-red-500"
+                        title="Delete entry"
+                        onClick={() => { setDeletingId(entry.id); setShowConfirm(true); }}
+                        disabled={isDeleting && deletingId === entry.id}
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
                     </div>
                   </div>
                   <div className="p-3">
@@ -151,9 +226,45 @@ export default function History() {
               ))}
             </div>
           )}
-          
+
+          {/* Delete confirmation dialog */}
+          {showConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+                <h3 className="text-lg font-semibold mb-2">Delete Entry?</h3>
+                <p className="text-sm mb-4">Are you sure you want to delete this history entry? This action cannot be undone.</p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setShowConfirm(false); setDeletingId(null); }} disabled={isDeleting}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={() => deletingId && deleteMutation.mutate(deletingId)} disabled={isDeleting}>
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete All confirmation dialog */}
+          {showDeleteAll && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+                <h3 className="text-lg font-semibold mb-2">Delete All Snapshots?</h3>
+                <p className="text-sm mb-4">Are you sure you want to delete <b>all</b> history entries? This action cannot be undone.</p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowDeleteAll(false)} disabled={isDeletingAll}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={() => deleteAllMutation.mutate()} disabled={isDeletingAll}>
+                    {isDeletingAll ? "Deleting..." : "Delete All"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pagination */}
-          {data?.total > 0 && (
+          {data && data.total > 0 && (
             <div className="mt-6 flex items-center justify-between">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Showing <span className="font-medium">{(currentPage - 1) * 9 + 1}-{Math.min(currentPage * 9, data.total)}</span> of <span className="font-medium">{data.total}</span> results

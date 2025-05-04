@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import * as faceapi from 'face-api.js';
 import { useDoorbellContext } from '@/context/DoorbellContext';
 import { Person, Detection } from '@/types';
+import { loadModels } from '@/lib/face-api';
 
 interface UseFaceRecognitionProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -27,24 +28,11 @@ export const useFaceRecognition = ({
 
   // Load face-api.js models
   useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const MODEL_URL = '/models';
-        
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-        
-        setIsModelLoaded(true);
-        console.log('Face models loaded');
-      } catch (error) {
-        console.error('Error loading face models:', error);
-      }
+    const load = async () => {
+      await loadModels();
+      setIsModelLoaded(true);
     };
-
-    loadModels();
+    load();
   }, []);
 
   // Build face matcher when people change
@@ -99,6 +87,7 @@ export const useFaceRecognition = ({
       setIsProcessing(true);
 
       try {
+        await loadModels();
         const detections = await faceapi
           .detectAllFaces(videoRef.current)
           .withFaceLandmarks()
@@ -197,6 +186,7 @@ export const useFaceRecognition = ({
     if (!isModelLoaded) return null;
 
     try {
+      await loadModels();
       const img = await faceapi.fetchImage(imageUrl);
       const detection = await faceapi
         .detectSingleFace(img)
@@ -218,6 +208,7 @@ export const useFaceRecognition = ({
     if (!videoRef.current || !isModelLoaded) {
       return [];
     }
+    await loadModels();
 
     const images: string[] = [];
     let capturedCount = 0;

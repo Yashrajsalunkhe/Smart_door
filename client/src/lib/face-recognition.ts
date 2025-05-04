@@ -21,28 +21,34 @@ export interface DetectedFace {
 
 let facesMatcher: faceapi.FaceMatcher | null = null;
 let initialized = false;
+let initializingPromise: Promise<boolean> | null = null;
 
 // Initialize face-api.js and load models
 export async function initFaceRecognition(): Promise<boolean> {
   if (initialized) return true;
-  
-  try {
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-      faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
-    ]);
-    
-    // Load saved face data
-    await loadFaceProfiles();
-    
-    initialized = true;
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize face recognition:', error);
-    return false;
-  }
+  if (initializingPromise) return initializingPromise;
+  initializingPromise = (async () => {
+    try {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+        faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+      ]);
+      
+      // Load saved face data
+      await loadFaceProfiles();
+      
+      initialized = true;
+      initializingPromise = null;
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize face recognition:', error);
+      initializingPromise = null;
+      return false;
+    }
+  })();
+  return initializingPromise;
 }
 
 // Load saved face profiles from the backend

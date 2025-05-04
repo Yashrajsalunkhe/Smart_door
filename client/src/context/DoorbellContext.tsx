@@ -66,7 +66,14 @@ export const DoorbellProvider = ({ children }: { children: ReactNode }) => {
         // Load people
         const peopleResponse = await fetch('/api/people');
         if (peopleResponse.ok) {
-          const peopleData = await peopleResponse.json();
+          let peopleData = await peopleResponse.json();
+          // Convert descriptor to Float32Array if needed
+          peopleData = peopleData.map((person: any) => ({
+            ...person,
+            descriptor: person.descriptor && Array.isArray(person.descriptor)
+              ? new Float32Array(person.descriptor)
+              : person.descriptor
+          }));
           setPeople(peopleData);
         }
 
@@ -111,7 +118,15 @@ export const DoorbellProvider = ({ children }: { children: ReactNode }) => {
       if (!response.ok) throw new Error('Failed to add person');
       
       const newPerson = await response.json();
-      setPeople(prev => [...prev, newPerson]);
+      // Instead of just adding newPerson, reload the full people list from backend
+      const peopleResponse = await fetch('/api/people');
+      if (peopleResponse.ok) {
+        const peopleData = await peopleResponse.json();
+        setPeople(peopleData);
+      } else {
+        // fallback: add newPerson locally if reload fails
+        setPeople(prev => [...prev, newPerson]);
+      }
       return newPerson;
     } catch (error) {
       console.error('Error adding person:', error);

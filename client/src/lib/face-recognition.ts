@@ -3,13 +3,10 @@ import { apiRequest } from './queryClient';
 import { queryClient } from './queryClient';
 
 // Types for the face recognition system
-export interface FaceData {
-  id: number;
-  name: string;
-  relationship: string;
-  imageCount: number;
-  dateAdded: string;
-  descriptor: Float32Array;
+import { Face } from '@/types';
+
+export interface FaceData extends Face {
+  descriptor: number[];
 }
 
 export interface DetectedFace {
@@ -30,10 +27,10 @@ export async function initFaceRecognition(): Promise<boolean> {
   initializingPromise = (async () => {
     try {
       await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-        faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models/tiny_face_detector'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models/face_landmark_68'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models/face_recognition'),
+        faceapi.nets.ssdMobilenetv1.loadFromUri('/models/ssd_mobilenetv1')
       ]);
       
       // Load saved face data
@@ -59,9 +56,13 @@ export async function loadFaceProfiles(): Promise<FaceData[]> {
     
     if (faceProfiles.length > 0) {
       const labeledDescriptors = faceProfiles.map(face => {
+        // Convert descriptor array to Float32Array for face-api.js
+        const descriptorArr = Array.isArray(face.descriptor)
+          ? new Float32Array(face.descriptor)
+          : new Float32Array(Object.values(face.descriptor));
         return new faceapi.LabeledFaceDescriptors(
           face.name, 
-          [new Float32Array(Object.values(face.descriptor))]
+          [descriptorArr]
         );
       });
       

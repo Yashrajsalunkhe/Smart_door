@@ -1,52 +1,52 @@
-export interface Person {
-  id: string;
+// Types matching backend schema (shared/schema.ts)
+export interface Face {
+  id: number;
   name: string;
-  images: string[];
-  createdAt: string;
-  descriptor?: Float32Array;
+  relationship: string;
+  imageCount: number;
+  dateAdded: string;
+  descriptor: number[]; // always array for JSON, convert to Float32Array in memory
 }
 
-export interface Detection {
-  id: string;
-  personId: string | null;
-  personName: string | null;
-  timestamp: string;
-  imageUrl: string;
-  confidence: number;
+export interface HistoryEntry {
+  id: number;
+  personName: string;
   isKnown: boolean;
+  confidence: number;
+  timestamp: string;
+  doorStatus: string;
+  snapshot: string;
 }
 
-export interface DoorbellSettings {
+export interface Settings {
+  id: number;
   notifications: {
     email: boolean;
     browser: boolean;
-    mobile: boolean;
+    sms: boolean;
+    emailAddress: string;
   };
   recognition: {
-    confidenceThreshold: number;
-    saveKnownFaces: boolean;
-    filterLowQuality: boolean;
+    confidenceThreshold: number; // 0-1 float for face-api.js, UI can use 60-95 and convert
+    snapshotStoragePolicy?: string;
+    autoDeletePolicy?: string;
+    skipBlurredImages?: boolean;
+    autoDetectFrequentVisitors?: boolean;
   };
   camera: {
-    quality: 'low' | 'medium' | 'high';
-    captureDuration: 15 | 30 | 45;
+    resolution: string;
+    trainingImageQuality?: string;
+    frameRate?: number;
+  };
+  account: {
+    name: string;
+    email: string;
+    // password: string; // never expose password in frontend
   };
 }
 
 export interface DoorStatus {
-  isLocked: boolean;
-  lastChanged: string;
-}
-
-export interface HistoryFilters {
-  dateRange: 'today' | 'week' | 'month' | 'custom';
-  personFilter: string;
-  searchTerm: string;
-  sortOrder: 'newest' | 'oldest';
-}
-
-export interface WeatherInfo {
-  temperature: number;
-  condition: string;
-  feelsLike: number;
+  id: number;
+  status: string;
+  lastUpdated: string;
 }

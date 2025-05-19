@@ -1,12 +1,12 @@
 🔔 Smart Doorbell
 
-An intelligent doorbell system that leverages face recognition to identify visitors, captures snapshots for history logging, and sends real-time alerts to homeowners. Built using Raspberry Pi, OpenCV, and Python.
+An intelligent doorbell system that leverages face recognition to identify visitors, captures snapshots for history logging, and sends real-time alerts to homeowners. Built using TypeScript, Vite, and Drizzle ORM.
 📸 Demo
 
 Replace with an actual image or GIF showcasing your project's functionality.
 🚀 Features
 
-    Face Recognition: Utilizes OpenCV's LBPH algorithm to detect and recognize faces.
+    Face Recognition: Utilizes pre-trained models to detect and recognize faces.
 
     Snapshot History: Stores images of visitors with timestamps for future reference.
 
@@ -18,40 +18,41 @@ Replace with an actual image or GIF showcasing your project's functionality.
 
 🛠️ Tech Stack
 
-    Hardware: Raspberry Pi 4, Pi Camera Module
+    Frontend: Vite, TypeScript, Tailwind CSS
 
-    Software: Python 3, OpenCV, Haar Cascade Classifier
+    Backend: Node.js, Express.js, Drizzle ORM
 
-    Libraries: NumPy, face_recognition, smtplib for email notifications
+    Database: SQLite (via Drizzle ORM)
+
+    Others: PostCSS, Vercel for deployment
 
 📂 Project Structure
 
 smart-doorbell/
-  client
-  │   ├── index.html
-  │   └── src
-  ├── drizzle.config.ts
-  ├── faces.json
-  ├── generated-icon.png
-  ├── package.json
-  ├── package-lock.json
-  ├── postcss.config.js
-  ├── public
-  │   └── models
-  ├── server
-  │   ├── face-models.ts
-  │   ├── index.ts
-  │   ├── routes.ts
-  │   ├── storage.ts
-  │   └── vite.ts
-  ├── shared
-  │   └── schema.ts
-  ├── tailwind.config.ts
-  ├── theme.json
-  ├── tsconfig.json
-  ├── vercel.json
-  └── vite.config.ts
-
+├── client/                 # Frontend application
+│   ├── index.html
+│   └── src/
+├── server/                 # Backend application
+│   ├── face-models.ts
+│   ├── index.ts
+│   ├── routes.ts
+│   ├── storage.ts
+│   └── vite.ts
+├── shared/                 # Shared resources
+│   └── schema.ts
+├── public/                 # Public assets
+│   └── models/
+├── drizzle.config.ts       # Drizzle ORM configuration
+├── faces.json              # Stored face data
+├── generated-icon.png      # Application icon
+├── package.json            # Project metadata
+├── package-lock.json       # Dependency lock file
+├── postcss.config.js       # PostCSS configuration
+├── tailwind.config.ts      # Tailwind CSS configuration
+├── theme.json              # Theme settings
+├── tsconfig.json           # TypeScript configuration
+├── vercel.json             # Vercel deployment configuration
+└── vite.config.ts          # Vite configuration
 
 ⚙️ Installation
 
@@ -62,23 +63,19 @@ cd smart-doorbell
 
 Install Dependencies:
 
-pip install -r requirements.txt
+npm install
 
-Prepare the Dataset:
+Configure Environment:
 
-    Collect images of known individuals and place them in the dataset/ directory.
-
-    Run the training script:
-
-    python train_model.py
+    Set up necessary environment variables and configurations as per your setup.
 
 Run the Application:
 
-    python main.py
+    npm run dev
 
 🧪 How It Works
 
-    The system continuously monitors the door area using the Pi Camera.
+    The system continuously monitors the door area using the camera.
 
     Upon detecting a face, it captures an image and compares it against the trained model.
 

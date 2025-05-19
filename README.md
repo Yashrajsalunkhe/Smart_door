@@ -28,31 +28,32 @@ Replace with an actual image or GIF showcasing your project's functionality.
 
 📂 Project Structure
 
-smart-doorbell/
-├── client/                 # Frontend application
-│   ├── index.html
-│   └── src/
-├── server/                 # Backend application
-│   ├── face-models.ts
-│   ├── index.ts
-│   ├── routes.ts
-│   ├── storage.ts
-│   └── vite.ts
-├── shared/                 # Shared resources
-│   └── schema.ts
-├── public/                 # Public assets
-│   └── models/
-├── drizzle.config.ts       # Drizzle ORM configuration
-├── faces.json              # Stored face data
-├── generated-icon.png      # Application icon
-├── package.json            # Project metadata
-├── package-lock.json       # Dependency lock file
-├── postcss.config.js       # PostCSS configuration
-├── tailwind.config.ts      # Tailwind CSS configuration
-├── theme.json              # Theme settings
-├── tsconfig.json           # TypeScript configuration
-├── vercel.json             # Vercel deployment configuration
-└── vite.config.ts          # Vite configuration
+        smart-doorbell/
+        ├── client/                 # Frontend application
+        │   ├── index.html
+        │   └── src/
+        ├── server/                 # Backend application
+        │   ├── face-models.ts
+        │   ├── index.ts
+        │   ├── routes.ts
+        │   ├── storage.ts
+        │   └── vite.ts
+        ├── shared/                 # Shared resources
+        │   └── schema.ts
+        ├── public/                 # Public assets
+        │   └── models/
+        ├── drizzle.config.ts       # Drizzle ORM configuration
+        ├── faces.json              # Stored face data
+        ├── generated-icon.png      # Application icon
+        ├── package.json            # Project metadata
+        ├── package-lock.json       # Dependency lock file
+        ├── postcss.config.js       # PostCSS configuration
+        ├── tailwind.config.ts      # Tailwind CSS configuration
+        ├── theme.json              # Theme settings
+        ├── tsconfig.json           # TypeScript configuration
+        ├── vercel.json             # Vercel deployment configuration
+        └── vite.config.ts          # Vite configuration
+
 
 ⚙️ Installation
 
